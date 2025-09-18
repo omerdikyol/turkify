@@ -58,6 +58,9 @@ class TrayApp:
         copy_combo = [Key.cmd if is_macos else Key.ctrl, "c"]
         paste_combo = [Key.cmd if is_macos else Key.ctrl, "v"]
 
+        # Save current clipboard to restore later
+        prev_clip = pyperclip.paste()
+
         # Copy
         for k in copy_combo:
             kb.press(k)
@@ -75,6 +78,12 @@ class TrayApp:
             kb.press(k)
         for k in reversed(paste_combo):
             kb.release(k)
+        # Restore previous clipboard after paste
+        time.sleep(0.12)
+        try:
+            pyperclip.copy(prev_clip)
+        except Exception:
+            pass
 
     def _toggle_pause(self, icon, item):
         if not self.watcher:
@@ -157,7 +166,8 @@ class TrayApp:
 
 
 def main(argv: Optional[list[str]] = None) -> int:
-    use_llm = bool(os.environ.get("TURKIFY_USE_LLM", "").strip())
+    env_val = os.environ.get("TURKIFY_USE_LLM", "1").strip().lower()
+    use_llm = env_val not in ("0", "false", "no", "off", "")
     TrayApp(use_llm=use_llm).run()
     return 0
 

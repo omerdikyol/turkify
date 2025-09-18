@@ -12,6 +12,9 @@ authors = [{name = "You"}]
 dependencies = [
   "pyperclip>=1.8",
   "pynput>=1.7",
+  "llama-cpp-python>=0.2.0",
+  "requests>=2.31",
+  "tqdm>=4.66",
   "pystray>=0.19.5",
   "Pillow>=9.0",
 ]
@@ -19,11 +22,6 @@ dependencies = [
 [project.optional-dependencies]
 deasciify = [
   "turkish-deasciifier>=1.0.1; python_version >= '3.8'",
-]
-llm = [
-  "llama-cpp-python>=0.2.0; python_version >= '3.8'",
-  "requests>=2.31",
-  "tqdm>=4.66",
 ]
 
 [project.scripts]

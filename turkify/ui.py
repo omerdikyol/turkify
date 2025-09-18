@@ -41,7 +41,9 @@ def run() -> None:
     btns.pack(fill=tk.X, pady=(8, 0))
 
     # LLM toggle via env to keep UI minimal
-    use_llm = bool(os.environ.get("TURKIFY_USE_LLM", "").strip())
+    # LLM is default; disable with TURKIFY_USE_LLM=0/false/no/off
+    env_val = os.environ.get("TURKIFY_USE_LLM", "1").strip().lower()
+    use_llm = env_val not in ("0", "false", "no", "off", "")
     if use_llm:
         # Prefetch model on initial start (first launch)
         try:

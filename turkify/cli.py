@@ -18,7 +18,7 @@ def _convert_clipboard(conv_func, in_place: bool = True) -> str:
     return conv
 
 
-def _watch_hotkey(hotkey: str, conv_func) -> None:
+def _watch_hotkey(hotkey: str, conv_func, restore_clipboard: bool = True) -> None:
     from pynput import keyboard
     from pynput.keyboard import Key, Controller
 
@@ -29,6 +29,9 @@ def _watch_hotkey(hotkey: str, conv_func) -> None:
     kb = Controller()
 
     def do_roundtrip():
+        import pyperclip as _pc
+        # Save previous clipboard so we can restore it after paste
+        prev_clip = _pc.paste() if restore_clipboard else None
         # Copy
         for k in copy_combo:
             kb.press(k)
@@ -44,6 +47,13 @@ def _watch_hotkey(hotkey: str, conv_func) -> None:
             kb.press(k)
         for k in reversed(paste_combo):
             kb.release(k)
+        if restore_clipboard and prev_clip is not None:
+            # Allow the target app to consume the clipboard before restoring
+            time.sleep(0.12)
+            try:
+                _pc.copy(prev_clip)
+            except Exception:
+                pass
 
     print(f"Watching global hotkey: {hotkey}. Press ESC to quit.")
 
@@ -69,7 +79,7 @@ def _watch_hotkey(hotkey: str, conv_func) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="turkify", description="Turkish deasciifier")
+    p = argparse.ArgumentParser(prog="turkify", description="Turkish deasciifier (LLM by default)")
     p.add_argument("--text", help="Convert given text and print result")
     p.add_argument("--clipboard", action="store_true", help="Convert clipboard in place")
     p.add_argument(
@@ -80,11 +90,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--ui", action="store_true", help="Launch Tk UI")
     # LLM options
-    p.add_argument("--llm", action="store_true", help="Use local LLM if available (Ollama or llama.cpp)")
+    p.add_argument("--llm", action="store_true", help="Use local LLM (default) if available (Ollama or llama.cpp)")
+    p.add_argument("--heuristic", action="store_true", help="Force heuristic/rule-based mode (disable LLM)")
     p.add_argument("--ollama-model", help="Ollama model name (e.g. 'tinyllama:latest')")
     p.add_argument("--ollama-host", default="http://localhost:11434", help="Ollama host URL")
     p.add_argument("--llama-model", help="Path to GGUF model for llama.cpp")
-    p.add_argument("--auto-download-model", action="store_true", help="Auto-download a small GGUF to cache if missing")
+    p.add_argument("--auto-download-model", action="store_true", help="Auto-download a small GGUF to cache if missing (default with LLM)")
     p.add_argument("--no-auto-download", action="store_true", help="Disable auto-download even if --llm is set")
     p.add_argument(
         "--model-name",
@@ -102,6 +113,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--autostart-hotkey", help="Override hotkey when installing autostart")
     p.add_argument("--uninstall-autostart", action="store_true", help="Remove autostart entry")
+    # Clipboard behavior
+    p.add_argument("--no-restore-clipboard", action="store_true", help="Do not restore previous clipboard contents after paste")
     return p
 
 
@@ -125,13 +138,14 @@ def main(argv: list[str] | None = None) -> int:
 
     # Optionally prepare local llama.cpp model on startup (first run download)
     def _prepare_llm():
-        if not (args.llm or args.ollama_model or args.llama_model):
+        llm_enabled = (not args.heuristic) or args.llm or args.ollama_model or args.llama_model
+        if not llm_enabled:
             return None
         # If Ollama is specified, nothing to prepare locally
         if args.ollama_model:
             return None
         # Decide auto-download default: enabled when using --llm unless explicitly disabled
-        auto_download = args.auto_download_model or (args.llm and not args.no_auto_download and not args.llama_model)
+        auto_download = args.auto_download_model or ((not args.no_auto_download) and (not args.llama_model))
         if auto_download and not args.llama_model:
             try:
                 from .models import ensure_model
@@ -147,14 +161,15 @@ def main(argv: list[str] | None = None) -> int:
 
     # Choose conversion function
     def _conv(text: str) -> str:
-        if args.llm or args.ollama_model or args.llama_model:
+        llm_enabled = (not args.heuristic) or args.llm or args.ollama_model or args.llama_model
+        if llm_enabled:
             out = deasciify_via_llm(
                 text,
                 backend=None,
                 ollama_model=args.ollama_model,
                 ollama_host=args.ollama_host,
                 llama_model=args.llama_model,
-                auto_download_model=(args.auto_download_model or (args.llm and not args.no_auto_download and not args.llama_model)),
+                auto_download_model=(args.auto_download_model or ((not args.no_auto_download) and (not args.llama_model))),
                 model_key=args.model_name,
                 custom_model_url=args.model_url,
             )
@@ -173,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
         # On mac suggest cmd
         if sys.platform == "darwin" and "<cmd>" not in hotkey:
             hotkey = "<cmd>+<alt>+t"
-        _watch_hotkey(hotkey, _conv)
+        _watch_hotkey(hotkey, _conv, restore_clipboard=(not args.no_restore_clipboard))
         return 0
 
     if args.text:
