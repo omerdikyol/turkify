@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turkify"
+version = "0.1.0"
+description = "Convert ASCII-typed Turkish text to proper Turkish characters (deasciify) with UI and hotkey"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{name = "You"}]
+dependencies = [
+  "pyperclip>=1.8",
+  "pynput>=1.7",
+  "pystray>=0.19.5",
+  "Pillow>=9.0",
+]
+
+[project.optional-dependencies]
+deasciify = [
+  "turkish-deasciifier>=1.0.1; python_version >= '3.8'",
+]
+llm = [
+  "llama-cpp-python>=0.2.0; python_version >= '3.8'",
+  "requests>=2.31",
+  "tqdm>=4.66",
+]
+
+[project.scripts]
+turkify = "turkify.cli:main"
+turkify-watch = "turkify.entrypoints:watch_main"
+turkify-watch-llm = "turkify.entrypoints:watch_llm_main"
+turkify-tray = "turkify.tray:main"
