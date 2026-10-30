@@ -1,4 +1,10 @@
-# Turkify
+<h1 align="center">Turkify</h1>
+
+<p align="center">
+  <img alt="language: Python" src="https://img.shields.io/badge/language-Python-3776AB">
+  <img alt="platform: macOS | Windows | Linux" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey">
+  <img alt="model: local GGUF" src="https://img.shields.io/badge/model-local%20GGUF-blue">
+</p>
 
 Restore Turkish characters in text typed with an English keyboard. Select text and use a hotkey, convert a string in the terminal, or paste it into the small desktop UI.
 
